@@ -38,14 +38,17 @@ CREATE TABLE donations (
     initiative VARCHAR(100),
     anonymous BOOLEAN DEFAULT FALSE,
     recurring BOOLEAN DEFAULT FALSE,
-    stripe_payment_intent_id VARCHAR(255),
+    payment_gateway VARCHAR(20) CHECK (payment_gateway IN ('RAZORPAY', 'PAYPAL')),
+    payment_id VARCHAR(255),
+    order_id VARCHAR(255),
     status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED', 'REFUNDED')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_donations_user ON donations(user_id);
 CREATE INDEX idx_donations_status ON donations(status);
-CREATE INDEX idx_donations_stripe ON donations(stripe_payment_intent_id);
+CREATE INDEX idx_donations_gateway ON donations(payment_gateway);
+CREATE INDEX idx_donations_order ON donations(order_id);
 
 -- Initiative Applications Table
 CREATE TABLE initiative_applications (

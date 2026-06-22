@@ -34,7 +34,18 @@ public class Donation {
     @Builder.Default
     private boolean recurring = false;
 
-    private String stripePaymentIntentId;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_gateway")
+    private PaymentGateway paymentGateway;
+
+    private String paymentId;
+    private String orderId;
+    private String paymentSignature;
+
+    @Column(length = 1000)
+    private String failureReason;
+
+    private LocalDateTime completedAt;
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
@@ -42,6 +53,8 @@ public class Donation {
 
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    public enum PaymentGateway { RAZORPAY, PAYPAL }
 
     public enum PaymentStatus { PENDING, SUCCESS, FAILED, REFUNDED }
 }

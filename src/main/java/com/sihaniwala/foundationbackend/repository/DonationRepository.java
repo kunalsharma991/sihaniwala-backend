@@ -8,4 +8,10 @@ import java.util.Optional;
 public interface DonationRepository extends JpaRepository<Donation, Long> {
     List<Donation> findByUserId(Long userId);
     List<Donation> findByStatus(Donation.PaymentStatus status);
+    
+    /**
+     * Find donation by order ID and payment gateway.
+     * Used for efficient lookup during payment verification/capture.
+     */
+    Optional<Donation> findByOrderIdAndPaymentGateway(String orderId, Donation.PaymentGateway paymentGateway);
 }

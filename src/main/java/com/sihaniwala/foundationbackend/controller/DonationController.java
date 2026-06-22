@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -19,23 +18,64 @@ public class DonationController {
 
     private final DonationService donationService;
 
-    @PostMapping("/payments/create-payment-intent")
-    public ResponseEntity<ApiResponse<Map<String, String>>> createPaymentIntent(
-            @RequestBody PaymentRequest request, Principal principal) {
-        String email = principal != null ? principal.getName() : null;
-        Map<String, String> result = donationService.createPaymentIntent(request, email);
-        return ResponseEntity.ok(ApiResponse.ok("Payment intent created", result));
+    // ========== RAZORPAY ENDPOINTS ==========
+
+    @PostMapping("/payments/razorpay/order")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createRazorpayOrder(
+            @RequestBody PaymentRequest request) {
+        Map<String, Object> result = donationService.createRazorpayOrder(request);
+        return ResponseEntity.ok(ApiResponse.ok("Razorpay order created", result));
     }
 
-    @PostMapping("/payments/confirm")
-    public ResponseEntity<ApiResponse<Donation>> confirmPayment(@RequestBody Map<String, String> body) {
-        Donation donation = donationService.confirmDonation(body.get("paymentIntentId"));
-        return ResponseEntity.ok(ApiResponse.ok("Payment confirmed", donation));
+    @PostMapping("/payments/razorpay/verify")
+    public ResponseEntity<ApiResponse<Donation>> verifyRazorpayPayment(
+            @RequestBody Map<String, String> body) {
+        String orderId = body.get("razorpay_order_id");
+        String paymentId = body.get("razorpay_payment_id");
+        String signature = body.get("razorpay_signature");
+
+        Donation donation = donationService.verifyRazorpayPayment(orderId, paymentId, signature);
+        String message = donation.getStatus() == Donation.PaymentStatus.SUCCESS
+                ? "Payment verified successfully"
+                : "Payment verification failed";
+        return ResponseEntity.ok(ApiResponse.ok(message, donation));
     }
+
+    // ========== PAYPAL ENDPOINTS ==========
+
+    @PostMapping("/payments/paypal/order")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createPaypalOrder(
+            @RequestBody PaymentRequest request) {
+        Map<String, Object> result = donationService.createPaypalOrder(request);
+        return ResponseEntity.ok(ApiResponse.ok("PayPal order created", result));
+    }
+
+    @PostMapping("/payments/paypal/capture/{orderId}")
+    public ResponseEntity<ApiResponse<Donation>> capturePaypalOrder(
+            @PathVariable String orderId) {
+        Donation donation = donationService.capturePaypalPayment(orderId);
+        return ResponseEntity.ok(ApiResponse.ok("PayPal payment captured", donation));
+    }
+
+    @PostMapping("/payments/paypal/create-order")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createPaypalOrderLegacy(
+            @RequestBody PaymentRequest request) {
+        Map<String, Object> result = donationService.createPaypalOrder(request);
+        return ResponseEntity.ok(ApiResponse.ok("PayPal order created", result));
+    }
+
+    @PostMapping("/payments/paypal/capture-order")
+    public ResponseEntity<ApiResponse<Donation>> capturePaypalOrderLegacy(
+            @RequestBody Map<String, String> body) {
+        String orderId = body.get("orderId");
+        Donation donation = donationService.capturePaypalPayment(orderId);
+        return ResponseEntity.ok(ApiResponse.ok("PayPal payment captured", donation));
+    }
+
+    // ========== COMMON ENDPOINTS ==========
 
     @GetMapping("/donations")
-    public ResponseEntity<ApiResponse<List<Donation>>> getUserDonations(Principal principal) {
-        // This will get user ID from the principal - simplified for now
+    public ResponseEntity<ApiResponse<List<Donation>>> getAllDonations() {
         List<Donation> donations = donationService.getAllDonations();
         return ResponseEntity.ok(ApiResponse.ok(donations));
     }

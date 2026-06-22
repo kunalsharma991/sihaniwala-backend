@@ -66,15 +66,47 @@ public class EmailService {
 
     private void sendEmail(String to, String subject, String body) {
         try {
+            log.info("Preparing to send email - to: {}, subject: {}, from: {}", to, subject, fromEmail);
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
             message.setTo(to);
             message.setSubject(subject);
             message.setText(body);
             mailSender.send(message);
-            log.info("Email sent to: {}", to);
+            log.info("Email sent successfully to: {}", to);
+        } catch (org.springframework.mail.MailAuthenticationException e) {
+            log.error("SMTP AUTHENTICATION FAILED for {}: {} - Check username/password in application.properties", to, e.getMessage());
+            log.error("Full auth error: ", e);
+        } catch (org.springframework.mail.MailSendException e) {
+            log.error("SMTP SEND FAILED for {}: {} - Check SMTP host/port configuration", to, e.getMessage());
+            log.error("Mail server exceptions: ", e.getMessageExceptions());
+            log.error("Full send error: ", e);
         } catch (Exception e) {
-            log.error("Failed to send email to {}: {}", to, e.getMessage());
+            log.error("EMAIL FAILED for {}: {} - Type: {}", to, e.getMessage(), e.getClass().getName());
+            log.error("Full error: ", e);
+        }
+    }
+
+    /**
+     * Test method that sends email and throws exceptions (for testing SMTP configuration).
+     * @throws Exception with exact error message
+     */
+    public void sendTestEmail(String to) throws Exception {
+        log.info("[TEST] Sending test email to: {}", to);
+        log.info("[TEST] Using from email: {}", fromEmail);
+        
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Test Email - Sihaniwala Foundation");
+        message.setText("This is a test email from Sihaniwala Foundation.\n\nIf you received this, SMTP is configured correctly.");
+        
+        try {
+            mailSender.send(message);
+            log.info("[TEST] Email sent successfully to: {}", to);
+        } catch (Exception e) {
+            log.error("[TEST] Email failed: {} - {}", e.getClass().getSimpleName(), e.getMessage());
+            throw e;
         }
     }
 }
