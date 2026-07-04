@@ -61,4 +61,12 @@ public class AuthController {
         UserDto user = authService.updateProfile(principal.getName(), updates);
         return ResponseEntity.ok(ApiResponse.ok("Profile updated", user));
     }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            Principal principal,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(principal.getName(), request);
+        return ResponseEntity.ok(ApiResponse.ok("Password changed successfully", null));
+    }
 }
