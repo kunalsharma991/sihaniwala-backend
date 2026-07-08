@@ -3,6 +3,7 @@ package com.sihaniwala.foundationbackend.service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    @Async
     public void sendRegistrationEmail(String to, String name) {
         sendEmail(to, "Welcome to Sihaniwala Foundation",
                 "Dear " + name + ",\n\nThank you for registering with Sihaniwala Foundation. " +
@@ -24,6 +26,7 @@ public class EmailService {
                 "Warm regards,\nSihaniwala Foundation Team");
     }
 
+    @Async
     public void sendDonationReceipt(String to, String name, String amount, String currency) {
         sendEmail(to, "Donation Receipt - Sihaniwala Foundation",
                 "Dear " + name + ",\n\nThank you for your generous donation of " + currency + " " + amount + ". " +
@@ -32,6 +35,7 @@ public class EmailService {
                 "With gratitude,\nSihaniwala Foundation Team");
     }
 
+    @Async
     public void sendApplicationConfirmation(String to, String name, String initiative) {
         sendEmail(to, "Application Received - " + initiative,
                 "Dear " + name + ",\n\nWe have received your application for " + initiative + ". " +
@@ -40,6 +44,7 @@ public class EmailService {
                 "Regards,\nSihaniwala Foundation Team");
     }
 
+    @Async
     public void sendApplicationStatusUpdate(String to, String name, String initiative, String status) {
         sendEmail(to, "Application Update - " + initiative,
                 "Dear " + name + ",\n\nYour application for " + initiative +
@@ -48,6 +53,7 @@ public class EmailService {
                 "Regards,\nSihaniwala Foundation Team");
     }
 
+    @Async
     public void sendPasswordResetEmail(String to, String name, String resetToken) {
         sendEmail(to, "Password Reset - Sihaniwala Foundation",
                 "Dear " + name + ",\n\nYou requested a password reset. " +
@@ -57,6 +63,7 @@ public class EmailService {
                 "Regards,\nSihaniwala Foundation Team");
     }
 
+    @Async
     public void sendContactConfirmation(String to, String name) {
         sendEmail(to, "We received your message - Sihaniwala Foundation",
                 "Dear " + name + ",\n\nThank you for reaching out to us. " +
@@ -91,6 +98,7 @@ public class EmailService {
      * Test method that sends email and throws exceptions (for testing SMTP configuration).
      * @throws Exception with exact error message
      */
+    @Async
     public void sendTestEmail(String to) throws Exception {
         log.info("[TEST] Sending test email to: {}", to);
         log.info("[TEST] Using from email: {}", fromEmail);
