@@ -36,8 +36,12 @@ public class AdminController {
     public ResponseEntity<ApiResponse<List<InitiativeApplication>>> getApplications(
             @RequestParam(required = false) String status) {
         List<InitiativeApplication> apps;
-        if (status != null) {
-            apps = initiativeService.getApplicationsByStatus(ApplicationStatus.valueOf(status));
+        if (status != null && !status.isBlank() && !status.equalsIgnoreCase("ALL")) {
+            try {
+                apps = initiativeService.getApplicationsByStatus(ApplicationStatus.valueOf(status.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                apps = adminService.getAllApplications();
+            }
         } else {
             apps = adminService.getAllApplications();
         }
