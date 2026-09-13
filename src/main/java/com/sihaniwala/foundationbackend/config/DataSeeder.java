@@ -44,11 +44,38 @@ public class DataSeeder implements CommandLineRunner {
     @Value("${admin.seed.password:admin123}")
     private String adminPassword;
 
+    @Value("${admin.password.reset.once:false}")
+    private boolean adminPasswordResetOnce;
+
     @Override
     public void run(String... args) {
-        seedAdminUser();
+        if (adminPasswordResetOnce) {
+            resetExistingAdminPassword();
+        } else {
+            seedAdminUser();
+        }
         seedSampleProjects();
         seedSampleGallery();
+    }
+
+    private void resetExistingAdminPassword() {
+        User admin = userRepository.findByEmail(adminEmail).orElse(null);
+        if (admin == null) {
+            log.warn("Admin password reset skipped: configured admin account was not found");
+            return;
+        }
+        if (admin.getRole() != User.Role.ADMIN) {
+            log.warn("Admin password reset skipped: configured account is not an ADMIN");
+            return;
+        }
+        if (passwordEncoder.matches(adminPassword, admin.getPassword())) {
+            log.info("Admin password reset skipped: configured admin password is already current");
+            return;
+        }
+
+        admin.setPassword(passwordEncoder.encode(adminPassword));
+        userRepository.save(admin);
+        log.info("Admin password reset completed for the configured admin account");
     }
 
     private void seedAdminUser() {
@@ -65,14 +92,7 @@ public class DataSeeder implements CommandLineRunner {
                 .build();
         userRepository.save(admin);
 
-        log.warn("==============================================================");
-        log.warn(" Seeded default ADMIN account:");
-        log.warn("   email:    {}", adminEmail);
-        log.warn("   password: {}", adminPassword);
-        log.warn(" CHANGE THIS PASSWORD IMMEDIATELY after first login in production,");
-        log.warn(" or set ADMIN_SEED_EMAIL / ADMIN_SEED_PASSWORD env vars before");
-        log.warn(" the first deploy so this default is never used at all.");
-        log.warn("==============================================================");
+        log.warn("Default ADMIN account seeded; change its password after first login");
     }
 
     private void seedSampleProjects() {
