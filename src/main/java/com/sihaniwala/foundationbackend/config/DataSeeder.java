@@ -44,38 +44,11 @@ public class DataSeeder implements CommandLineRunner {
     @Value("${admin.seed.password:admin123}")
     private String adminPassword;
 
-    @Value("${admin.password.reset.once:false}")
-    private boolean adminPasswordResetOnce;
-
     @Override
     public void run(String... args) {
-        if (adminPasswordResetOnce) {
-            resetExistingAdminPassword();
-        } else {
-            seedAdminUser();
-        }
+        seedAdminUser();
         seedSampleProjects();
         seedSampleGallery();
-    }
-
-    private void resetExistingAdminPassword() {
-        User admin = userRepository.findByEmail(adminEmail).orElse(null);
-        if (admin == null) {
-            log.warn("Admin password reset skipped: configured admin account was not found");
-            return;
-        }
-        if (admin.getRole() != User.Role.ADMIN) {
-            log.warn("Admin password reset skipped: configured account is not an ADMIN");
-            return;
-        }
-        if (passwordEncoder.matches(adminPassword, admin.getPassword())) {
-            log.info("Admin password reset skipped: configured admin password is already current");
-            return;
-        }
-
-        admin.setPassword(passwordEncoder.encode(adminPassword));
-        userRepository.save(admin);
-        log.info("Admin password reset completed for the configured admin account");
     }
 
     private void seedAdminUser() {
