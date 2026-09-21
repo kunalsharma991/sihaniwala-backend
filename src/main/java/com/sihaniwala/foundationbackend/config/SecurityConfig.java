@@ -1,10 +1,13 @@
 package com.sihaniwala.foundationbackend.config;
 
 import com.sihaniwala.foundationbackend.security.JwtAuthFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -30,6 +33,8 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @Value("${cors.allowed.origins}")
     private String allowedOrigins;
 
@@ -38,6 +43,17 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // A missing/expired/invalid JWT means the caller is unauthenticated, which is
+            // different from being authenticated without ROLE_ADMIN. The default entry point
+            // answered both with an empty 403, so an expired admin session was
+            // indistinguishable from an authorization failure and the frontend could never
+            // ask the admin to sign in again.
+            .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
+                response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                OBJECT_MAPPER.writeValue(response.getOutputStream(),
+                        Map.of("success", false, "message", "Authentication required. Your session has expired, please sign in again.", "data", ""));
+            }))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                         "/api/auth/login",
