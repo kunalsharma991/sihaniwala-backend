@@ -2,10 +2,12 @@ package com.sihaniwala.foundationbackend.service;
 
 import com.sihaniwala.foundationbackend.dto.DashboardStats;
 import com.sihaniwala.foundationbackend.entity.*;
+import com.sihaniwala.foundationbackend.exception.BadRequestException;
 import com.sihaniwala.foundationbackend.exception.ResourceNotFoundException;
 import com.sihaniwala.foundationbackend.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -50,8 +52,36 @@ public class AdminService {
         return userRepository.save(user);
     }
 
+    public void deleteUser(Long id, String authenticatedEmail) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.getEmail().equalsIgnoreCase(authenticatedEmail)) {
+            throw new BadRequestException("You cannot delete your own admin account");
+        }
+        if (user.getRole() == User.Role.ADMIN) {
+            long adminCount = userRepository.findAll().stream()
+                    .filter(existing -> existing.getRole() == User.Role.ADMIN)
+                    .count();
+            if (adminCount <= 1) {
+                throw new BadRequestException("The last admin account cannot be deleted");
+            }
+        }
+        try {
+            userRepository.delete(user);
+            userRepository.flush();
+        } catch (DataIntegrityViolationException ex) {
+            throw new BadRequestException("User cannot be deleted because related records prevent deletion");
+        }
+    }
+
     // Donation Management
     public List<Donation> getAllDonations() { return donationRepository.findAll(); }
+
+    public void deleteDonation(Long id) {
+        Donation donation = donationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Donation not found"));
+        donationRepository.delete(donation);
+    }
 
     // Application Management
     public List<InitiativeApplication> getAllApplications() { return applicationRepository.findAll(); }

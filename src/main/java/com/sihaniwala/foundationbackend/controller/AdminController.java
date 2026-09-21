@@ -11,12 +11,14 @@ import com.sihaniwala.foundationbackend.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -66,19 +68,36 @@ public class AdminController {
 
     // Users
     @GetMapping("/users")
-    public ResponseEntity<ApiResponse<List<User>>> getUsers() {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.getAllUsers()));
+    public ResponseEntity<ApiResponse<List<AdminUserView>>> getUsers() {
+        List<AdminUserView> users = adminService.getAllUsers().stream()
+                .map(this::toUserDto)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.ok(users));
     }
 
     @PutMapping("/users/{id}/toggle")
-    public ResponseEntity<ApiResponse<User>> toggleUser(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.ok("User status updated", adminService.toggleUserStatus(id)));
+    public ResponseEntity<ApiResponse<AdminUserView>> toggleUser(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("User status updated", toUserDto(adminService.toggleUserStatus(id))));
+    }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(
+            @PathVariable Long id, Authentication authentication) {
+        adminService.deleteUser(id, authentication.getName());
+        return ResponseEntity.ok(ApiResponse.ok("User deleted", null));
     }
 
     // Donations
     @GetMapping("/donations")
     public ResponseEntity<ApiResponse<List<Donation>>> getDonations() {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getAllDonations()));
+    }
+
+    @DeleteMapping("/donations/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteDonation(@PathVariable Long id) {
+        adminService.deleteDonation(id);
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Local donation record deleted. No payment-provider transaction was changed.", null));
     }
 
     // Volunteers
@@ -209,4 +228,13 @@ public class AdminController {
         adminService.deleteProject(id);
         return ResponseEntity.ok(ApiResponse.ok("Project deleted", null));
     }
+
+    private AdminUserView toUserDto(User user) {
+        return new AdminUserView(
+                user.getId(), user.getName(), user.getEmail(), user.getPhone(),
+                user.getRole().name(), user.isEnabled(), user.getCreatedAt());
+    }
+
+    private record AdminUserView(Long id, String name, String email, String phone,
+                                 String role, boolean enabled, LocalDateTime createdAt) {}
 }
