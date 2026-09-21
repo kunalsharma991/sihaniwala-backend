@@ -14,9 +14,12 @@ public class GalleryImage {
     @Column(nullable = false)
     private String title;
     private String category;
+    private String description;
     @Column(nullable = false)
     private String filePath;
     private String fileName;
+    @Column(name = "cloudinary_public_id", nullable = true)
+    private String cloudinaryPublicId;
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 }

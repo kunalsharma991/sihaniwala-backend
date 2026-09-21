@@ -6,7 +6,8 @@ import com.sihaniwala.foundationbackend.entity.*;
 import com.sihaniwala.foundationbackend.entity.InitiativeApplication.ApplicationStatus;
 import com.sihaniwala.foundationbackend.service.AdminService;
 import com.sihaniwala.foundationbackend.service.InitiativeService;
-import com.sihaniwala.foundationbackend.service.FileUploadService;
+import com.sihaniwala.foundationbackend.service.CloudinaryGalleryService;
+import com.sihaniwala.foundationbackend.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -23,7 +25,12 @@ public class AdminController {
 
     private final AdminService adminService;
     private final InitiativeService initiativeService;
-    private final FileUploadService fileUploadService;
+    private final CloudinaryGalleryService cloudinaryGalleryService;
+
+        private static final Set<String> GALLERY_CATEGORIES = Set.of(
+            "healthcare_assistance", "blood_donation_camp", "food_distribution",
+            "education_support", "marriage_support", "water_community_support",
+            "community_outreach", "other");
 
     // Dashboard
     @GetMapping("/dashboard")
@@ -112,21 +119,64 @@ public class AdminController {
     @PostMapping("/gallery")
     public ResponseEntity<ApiResponse<GalleryImage>> addGalleryImage(
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "title", required = false) String title,
-            @RequestParam(value = "category", required = false) String category) {
-        var doc = fileUploadService.uploadFile(file, "gallery", null, null);
+            @RequestParam("title") String title,
+            @RequestParam("category") String category,
+            @RequestParam(value = "description", required = false) String description) {
+        String trimmedTitle = title == null ? "" : title.trim();
+        String trimmedCategory = category == null ? "" : category.trim();
+        if (trimmedTitle.isEmpty()) {
+            throw new BadRequestException("Gallery title is required");
+        }
+        if (!GALLERY_CATEGORIES.contains(trimmedCategory)) {
+            throw new BadRequestException("Invalid gallery category");
+        }
+        CloudinaryGalleryService.CloudinaryUpload upload = cloudinaryGalleryService.upload(file);
         GalleryImage image = GalleryImage.builder()
-                .title(title != null ? title : doc.getOriginalName())
-                .category(category)
-                .filePath(doc.getFilePath())
-                .fileName(doc.getStoredName())
+                .title(trimmedTitle)
+                .category(trimmedCategory)
+                .description(description == null || description.trim().isEmpty() ? null : description.trim())
+                .filePath(upload.secureUrl())
+                .fileName(file.getOriginalFilename())
+                .cloudinaryPublicId(upload.publicId())
                 .build();
-        image = adminService.saveGalleryImage(image);
+        try {
+            image = adminService.saveGalleryImage(image);
+        } catch (RuntimeException ex) {
+            try {
+                cloudinaryGalleryService.delete(upload.publicId());
+            } catch (RuntimeException ignored) { }
+            throw ex;
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Image uploaded", image));
+    }
+
+    @PutMapping("/gallery/{id}")
+    public ResponseEntity<ApiResponse<GalleryImage>> updateGalleryImage(
+            @PathVariable Long id,
+            @RequestParam("title") String title,
+            @RequestParam("category") String category,
+            @RequestParam(value = "description", required = false) String description) {
+        String trimmedTitle = title == null ? "" : title.trim();
+        String trimmedCategory = category == null ? "" : category.trim();
+        if (trimmedTitle.isEmpty()) {
+            throw new BadRequestException("Gallery title is required");
+        }
+        if (!GALLERY_CATEGORIES.contains(trimmedCategory)) {
+            throw new BadRequestException("Invalid gallery category");
+        }
+        GalleryImage image = adminService.getGalleryImageById(id);
+        image.setTitle(trimmedTitle);
+        image.setCategory(trimmedCategory);
+        image.setDescription(description == null || description.trim().isEmpty() ? null : description.trim());
+        return ResponseEntity.ok(ApiResponse.ok("Gallery metadata updated", adminService.saveGalleryImage(image)));
     }
 
     @DeleteMapping("/gallery/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteGalleryImage(@PathVariable Long id) {
+        GalleryImage image = adminService.getGalleryImageById(id);
+        if (image.getCloudinaryPublicId() != null) {
+            cloudinaryGalleryService.delete(image.getCloudinaryPublicId());
+        }
         adminService.deleteGalleryImage(id);
         return ResponseEntity.ok(ApiResponse.ok("Image deleted", null));
     }

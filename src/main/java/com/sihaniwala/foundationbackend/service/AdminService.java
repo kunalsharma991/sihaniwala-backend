@@ -84,6 +84,11 @@ public class AdminService {
     // Gallery Management
     public List<GalleryImage> getAllGalleryImages() { return galleryRepository.findAll(); }
 
+    public GalleryImage getGalleryImageById(Long id) {
+        return galleryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Gallery image not found"));
+    }
+
     public GalleryImage saveGalleryImage(GalleryImage image) { return galleryRepository.save(image); }
 
     public void deleteGalleryImage(Long id) {
