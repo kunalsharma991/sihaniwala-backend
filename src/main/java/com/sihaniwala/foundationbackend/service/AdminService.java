@@ -28,12 +28,15 @@ public class AdminService {
     public DashboardStats getDashboardStats() {
         return DashboardStats.builder()
                 .totalUsers(userRepository.count())
-                .totalDonations(donationRepository.findByStatus(Donation.PaymentStatus.SUCCESS).size())
+                // SUCCESS-only count; kept under totalDonations for dashboard compatibility
+                .totalDonations(donationRepository.countByStatus(Donation.PaymentStatus.SUCCESS))
                 .pendingApplications(applicationRepository.countByStatus(InitiativeApplication.ApplicationStatus.PENDING))
+                .underReviewApplications(applicationRepository.countByStatus(InitiativeApplication.ApplicationStatus.UNDER_REVIEW))
                 .approvedApplications(applicationRepository.countByStatus(InitiativeApplication.ApplicationStatus.APPROVED))
                 .rejectedApplications(applicationRepository.countByStatus(InitiativeApplication.ApplicationStatus.REJECTED))
                 .totalVolunteers(volunteerRepository.count())
                 .totalContacts(contactRepository.count())
+                .totalProjects(projectRepository.count())
                 .build();
     }
 

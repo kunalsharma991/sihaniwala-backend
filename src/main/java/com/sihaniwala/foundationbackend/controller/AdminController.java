@@ -2,9 +2,12 @@ package com.sihaniwala.foundationbackend.controller;
 
 import com.sihaniwala.foundationbackend.dto.ApiResponse;
 import com.sihaniwala.foundationbackend.dto.DashboardStats;
+import com.sihaniwala.foundationbackend.dto.DonationAnalyticsResponse;
+import com.sihaniwala.foundationbackend.dto.ApplicationAnalyticsResponse;
 import com.sihaniwala.foundationbackend.entity.*;
 import com.sihaniwala.foundationbackend.entity.InitiativeApplication.ApplicationStatus;
 import com.sihaniwala.foundationbackend.service.AdminService;
+import com.sihaniwala.foundationbackend.service.AdminAnalyticsService;
 import com.sihaniwala.foundationbackend.service.InitiativeService;
 import com.sihaniwala.foundationbackend.service.CloudinaryGalleryService;
 import com.sihaniwala.foundationbackend.exception.BadRequestException;
@@ -26,6 +29,7 @@ import java.time.LocalDateTime;
 public class AdminController {
 
     private final AdminService adminService;
+    private final AdminAnalyticsService adminAnalyticsService;
     private final InitiativeService initiativeService;
     private final CloudinaryGalleryService cloudinaryGalleryService;
 
@@ -38,6 +42,17 @@ public class AdminController {
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<DashboardStats>> getDashboard() {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getDashboardStats()));
+    }
+
+    // Analytics (aggregated, non-sensitive; admin-only via /api/admin/** rule)
+    @GetMapping("/analytics/donations")
+    public ResponseEntity<ApiResponse<DonationAnalyticsResponse>> getDonationAnalytics() {
+        return ResponseEntity.ok(ApiResponse.ok(adminAnalyticsService.donationAnalytics()));
+    }
+
+    @GetMapping("/analytics/applications")
+    public ResponseEntity<ApiResponse<ApplicationAnalyticsResponse>> getApplicationAnalytics() {
+        return ResponseEntity.ok(ApiResponse.ok(adminAnalyticsService.applicationAnalytics()));
     }
 
     // Applications
